@@ -52,13 +52,13 @@ Browser ──► OAuth2-Proxy ──► Session Launcher (Go API)
 
 - Access to the target Kubernetes cluster with `kubectl` permissions to the `admin-web` namespace.
 - Container runtime capable of building and pushing images (tested with Podman; Docker works with flag changes).
-- Credentials to push to `harbor.bbmxclus1.blackbutterfly.mx` or your own registry.
+- Credentials to push to your own registry.
 - Entra ID tenant with a registered OAuth2 application for both OAuth2-Proxy and kubelogin device-code flow.
-- DNS entry pointing `admin.blackbutterfly.mx` (or your custom hostname) to the cluster ingress.
+- DNS entry pointing your custom hostname to the cluster ingress.
 
 ## Build the container images
 
-Run from `bbmx-infra/infrastructure/k9s-remote-admin`.
+Run from the root directory.
 
 ```bash
 # Update REGISTRY/IMAGE tags in build-ephemeral.sh if needed
@@ -135,7 +135,7 @@ kubectl apply -f k8s-ephemeral/04-oauth2-proxy-deployment.yaml
 
 ## Access & session workflow
 
-1. Operators navigate to `https://admin.blackbutterfly.mx/` and authenticate via Entra ID.
+1. Operators navigate to your custom domain and authenticate via Entra ID.
 2. The web UI calls `POST /session` on the Session Launcher, creating a Job that starts the ttyd+ k9s pod.
 3. Once the pod reports Ready, the UI redirects the browser to `/terminal/<session-id>`.
 4. The ttyd terminal launches `k9s`; on first use, the bundled `start-ephemeral-k9s.sh` instructs the user to visit `https://login.microsoftonline.com/device` and enter the displayed device code.
