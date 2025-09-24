@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" charset="utf-8">
+<head>
+    <title>K9s Admin Access - Sign In</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .sign-in-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: #326ce5;  /* Kubernetes blue */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            color: white;
+        }
+        h1 {
+            color: #333;
+            margin: 0 0 10px;
+            font-size: 28px;
+            font-weight: 300;
+        }
+        .subtitle {
+            color: #666;
+            margin: 0 0 30px;
+            font-size: 16px;
+        }
+        .security-notice {
+            background: #f8f9fa;
+            border-left: 4px solid #326ce5;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            border-radius: 0 8px 8px 0;
+        }
+        .security-notice strong {
+            color: #326ce5;
+        }
+        .sign-in-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        .sign-in-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .powered-by {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="sign-in-container">
+        <div class="logo">⚓</div>
+        <h1>K9s Admin Access</h1>
+        <p class="subtitle">Kubernetes Administrative Terminal</p>
+        
+        <div class="security-notice">
+            <strong>🛡️ Security Notice:</strong><br>
+            This system provides administrative access to Kubernetes clusters. 
+            All activities are logged and monitored. Unauthorized access is prohibited.
+        </div>
+        
+        <a href="/oauth2/start?rd={{.Redirect}}" class="sign-in-btn">
+            🔐 Sign in with Azure AD
+        </a>
+        
+        <div class="footer">
+            <strong>Blackbutterfly Infrastructure</strong><br>
+            Ephemeral Administrative Sessions
+        </div>
+        
+        <div class="powered-by">
+            Secured with OAuth2-Proxy v{{.Version}}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,43 @@
+# Ephemeral K9s Container - Designed for single-use sessions
+FROM docker.io/alpine:3.19
+
+# Install packages
+RUN apk add --no-cache ttyd bash curl git unzip ca-certificates util-linux
+
+# 1. Install k9s
+ARG K9S_VERSION=v0.50.12
+RUN curl -sL https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_amd64.tar.gz | tar xvz -C /usr/local/bin k9s
+
+# 2. Install kubectl (latest version)
+RUN curl -LO "https://dl.k8s.io/release/v1.34.1/bin/linux/amd64/kubectl" && \
+    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
+    rm kubectl
+
+# 3. Install kubelogin for OIDC (latest version)
+ARG KUBELOGIN_VERSION=v1.34.1
+RUN curl -sL https://github.com/int128/kubelogin/releases/download/${KUBELOGIN_VERSION}/kubelogin_linux_amd64.zip -o kubelogin.zip && \
+    unzip kubelogin.zip && \
+    mv kubelogin /usr/local/bin/kubectl-oidc_login && \
+    rm kubelogin.zip
+
+WORKDIR /root
+
+# Expose ttyd port
+EXPOSE 7681
+
+# Copy and setup startup script (latest versions update)
+RUN echo "Latest versions update: $(date)" > /tmp/cache-bust
+COPY start-ephemeral-k9s.sh /usr/local/bin/start-ephemeral-k9s.sh
+RUN chmod +x /usr/local/bin/start-ephemeral-k9s.sh
+
+# Create k9s config directory and copy optimized config
+RUN mkdir -p /root/.config/k9s
+COPY k9s-config.yaml /root/.config/k9s/config.yaml
+
+# Optimized ttyd command for ephemeral sessions with immediate cleanup
+# --once: Exit after last client disconnects
+# --exit-no-conn: Exit if no client connects within timeout
+ENTRYPOINT ["ttyd", "-i", "0.0.0.0", "-p", "7681", "--writable", "--max-clients", "1", "--once", "--exit-no-conn"]
+
+# Start the ephemeral session script
+CMD ["/usr/local/bin/start-ephemeral-k9s.sh"]

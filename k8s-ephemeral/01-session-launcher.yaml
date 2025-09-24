@@ -1,0 +1,155 @@
+---
+# Namespace for session launcher
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: admin-web
+  labels:
+    name: admin-web
+    component: ephemeral-sessions
+
+---
+# ServiceAccount for session launcher with permission to create Jobs
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: session-launcher
+  namespace: admin-web
+
+---
+# Role to create and manage Jobs in the admin-web namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: admin-web
+  name: session-launcher-role
+rules:
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+
+---
+# RoleBinding to bind the role to the service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: session-launcher-binding
+  namespace: admin-web
+subjects:
+- kind: ServiceAccount
+  name: session-launcher
+  namespace: admin-web
+roleRef:
+  kind: Role
+  name: session-launcher-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ConfigMap with OIDC kubeconfig for ephemeral containers - DEVICE CODE FLOW
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k9s-kubeconfig
+  namespace: admin-web
+data:
+  config: |
+    apiVersion: v1
+    kind: Config
+    clusters:
+    - name: k3s-cluster
+      cluster:
+        server: https://172.16.20.100:6443
+        insecure-skip-tls-verify: true
+    users:
+    - name: oidc-user
+      user:
+        exec:
+          apiVersion: client.authentication.k8s.io/v1beta1
+          command: kubectl-oidc_login
+          args:
+          - get-token
+          - --oidc-issuer-url=https://login.microsoftonline.com/<tenant-id>/v2.0
+          - --oidc-client-id=<client-id>
+          - --oidc-extra-scope=email
+          - --oidc-extra-scope=profile
+          - --grant-type=device-code
+          - --authentication-timeout-sec=300
+    contexts:
+    - name: default
+      context:
+        cluster: k3s-cluster
+        user: oidc-user
+    current-context: default
+
+---
+# Session Launcher Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: session-launcher
+  namespace: admin-web
+  labels:
+    app: session-launcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: session-launcher
+  template:
+    metadata:
+      labels:
+        app: session-launcher
+    spec:
+      serviceAccountName: session-launcher
+      containers:
+      - name: session-launcher
+        image: harbor.bbmxclus1.blackbutterfly.mx/k9s/session-launcher:v1.1-latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: PORT
+          value: "8080"
+        - name: SESSION_NAMESPACE
+          value: "admin-web"
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# Service for session launcher
+apiVersion: v1
+kind: Service
+metadata:
+  name: session-launcher-service
+  namespace: admin-web
+  labels:
+    app: session-launcher
+spec:
+  selector:
+    app: session-launcher
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+  type: ClusterIP

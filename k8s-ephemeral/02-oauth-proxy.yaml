@@ -1,0 +1,30 @@
+# OAuth2-proxy configuration for ephemeral sessions
+apiVersion: v1
+kind: Secret
+metadata:
+  name: oauth2-proxy-creds
+  namespace: admin-web
+stringData:
+  cookie-secret: "<cookie-secret>"
+  client-id: "<client-id>"
+  client-secret: "<client-secret>"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oauth2-proxy-config
+  namespace: admin-web
+data:
+  oauth2-proxy.cfg: |
+    http_address = "0.0.0.0:4180"
+    upstreams = [
+        "http://session-launcher-service.admin-web.svc.cluster.local:8080/"
+    ]
+    provider = "oidc"
+    oidc_issuer_url = "https://login.microsoftonline.com/<tenant-id>/v2.0"
+    scope = "openid email profile"
+    email_domains = [ "*" ]
+    cookie_secure = true
+    reverse_proxy = true
+    pass_host_header = true
+    skip_auth_regex = ["^/ws.*", "^/session/.*", "^/ttyd/.*"]

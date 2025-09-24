@@ -1,0 +1,52 @@
+# K9s configuration for performance optimization
+k9s:
+  # Refresh rate in seconds (default is 2s, increasing to 5s to reduce CPU)
+  refreshRate: 5
+  
+  # Reduce connection retry attempts
+  maxConnRetry: 3
+  
+  # Enable readonly mode to reduce resource usage
+  readOnly: false
+  
+  # Optimize UI updates
+  ui:
+    # Reduce screen refresh rate
+    enableMouse: false
+    headless: false
+    logoless: false
+    # Reduce color depth to save CPU
+    noIcons: true
+  
+  # Logger configuration to reduce I/O overhead
+  logger:
+    # Reduce log level to only show important messages
+    level: info
+    # Log file location
+    file: /tmp/k9s.log
+    # Keep log file small
+    size: 10
+    keepLogs: 1
+    
+  # Cluster settings
+  cluster:
+    # Reduce the number of resources to watch simultaneously
+    namespace:
+      active: default
+      lockFavorites: false
+    
+  # Skin settings (reduce visual complexity)
+  skin:
+    # Use a simpler skin to reduce rendering overhead
+    fgColor: white
+    bgColor: black
+    menuColor: blue
+    crumbsColor: white
+    
+  # Aliases to common commands to reduce typing and processing
+  aliases:
+    alias:
+      ev: events
+      po: pods
+      svc: services
+      no: nodes

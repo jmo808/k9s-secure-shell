@@ -1,0 +1,87 @@
+---
+# OAuth2-proxy deployment for ephemeral sessions
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth2-proxy
+  namespace: admin-web
+  labels:
+    app: oauth2-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oauth2-proxy
+  template:
+    metadata:
+      labels:
+        app: oauth2-proxy
+    spec:
+      containers:
+      - name: oauth2-proxy
+        image: quay.io/oauth2-proxy/oauth2-proxy:v7.12.0
+        args:
+          - "--config=/etc/oauth2-proxy-config/oauth2-proxy.cfg"
+        env:
+          # Load credentials from the Kubernetes Secret
+          - name: OAUTH2_PROXY_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: oauth2-proxy-creds
+                key: client-id
+          - name: OAUTH2_PROXY_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: oauth2-proxy-creds
+                key: client-secret
+          - name: OAUTH2_PROXY_COOKIE_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: oauth2-proxy-creds
+                key: cookie-secret
+        ports:
+        - containerPort: 4180
+          name: http-proxy
+        volumeMounts:
+          - name: proxy-config-volume
+            mountPath: /etc/oauth2-proxy-config
+          - name: custom-templates-volume
+            mountPath: /etc/oauth2-proxy-templates
+          - name: static-files-volume
+            mountPath: /etc/oauth2-proxy-templates/static
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+      volumes:
+        - name: proxy-config-volume
+          configMap:
+            name: oauth2-proxy-config
+        - name: custom-templates-volume
+          configMap:
+            name: oauth2-proxy-templates
+        - name: static-files-volume
+          configMap:
+            name: oauth2-proxy-static
+            defaultMode: 0644
+---
+# Service for OAuth2-proxy
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth2-proxy-service
+  namespace: admin-web
+  labels:
+    app: oauth2-proxy
+spec:
+  ports:
+  - port: 4180
+    targetPort: 4180
+    protocol: TCP
+    name: http-proxy
+  selector:
+    app: oauth2-proxy
+  type: ClusterIP

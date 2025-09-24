@@ -1,0 +1,207 @@
+# This secret holds the credentials for the Web Proxy App Registration.
+# !!! REPLACE THE PLACEHOLDERS BEFORE APPLYING !!!
+apiVersion: v1
+kind: Secret
+metadata:
+  name: oauth2-proxy-creds
+  namespace: admin-web
+stringData:
+  # Generated 32-character hex cookie secret (16 bytes for AES)
+  cookie-secret: "<cookie-secret>"
+  # Client ID/Secret for the Web Proxy App Registration
+  client-id: "<client-id>"
+  client-secret: "<client-secret>"
+---
+# Custom templates for OAuth2-proxy sign-in page
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oauth2-proxy-templates
+  namespace: admin-web
+data:
+  sign_in.html: |
+    <!DOCTYPE html>
+    <html lang="en" charset="utf-8">
+    <head>
+        <title>K9s Admin Access - Sign In</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                margin: 0;
+                padding: 0;
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            .sign-in-container {
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                padding: 40px;
+                max-width: 400px;
+                width: 90%;
+                text-align: center;
+            }
+            .logo {
+                width: 80px;
+                height: 80px;
+                margin: 0 auto 20px;
+                background: white;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+            .logo img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                border-radius: 8px;
+            }
+            h1 {
+                color: #333;
+                margin: 0 0 10px;
+                font-size: 28px;
+                font-weight: 300;
+            }
+            .subtitle {
+                color: #666;
+                margin: 0 0 30px;
+                font-size: 16px;
+            }
+            .security-notice {
+                background: #f8f9fa;
+                border-left: 4px solid #326ce5;
+                padding: 15px;
+                margin: 20px 0;
+                text-align: left;
+                border-radius: 0 8px 8px 0;
+            }
+            .security-notice strong {
+                color: #326ce5;
+            }
+            .sign-in-btn {
+                background: #28a745;
+                color: white;
+                border: none;
+                padding: 12px 30px;
+                border-radius: 6px;
+                font-size: 16px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-decoration: none;
+                display: inline-block;
+                margin: 20px 0;
+            }
+            .sign-in-btn:hover {
+                background: #218838;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            }
+            .footer {
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 1px solid #eee;
+                color: #666;
+                font-size: 14px;
+            }
+            .powered-by {
+                margin-top: 20px;
+                font-size: 12px;
+                color: #999;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="sign-in-container">
+            <div class="logo">
+            {{ if .LogoData }}
+                {{ .LogoData }}
+            {{ end }}
+            </div>
+            <h1>Blackbutterfly Admin Access</h1>
+            <p class="subtitle">Administrative Terminal</p>
+            
+            <div class="security-notice">
+                <strong>🛡️ Security Notice:</strong><br>
+                This system provides administrative access to Blackbutterfly Infrastructure. 
+                All activities are logged and monitored. Unauthorized access is prohibited.
+            </div>
+            
+            <a href="/oauth2/start?rd={{.Redirect}}" class="sign-in-btn">
+                🔐 Sign in with Entra ID
+            </a>
+            
+            <div class="footer">
+                <strong>Blackbutterfly Infrastructure</strong><br>
+                Ephemeral Administrative Sessions
+            </div>
+            
+            <div class="powered-by">
+                Secured with OAuth2-Proxy v{{.Version}}
+            </div>
+        </div>
+    </body>
+    </html>
+
+---
+# Configuration file for oauth2-proxy
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oauth2-proxy-config
+  namespace: admin-web
+data:
+  oauth2-proxy.cfg: |
+    http_address = "0.0.0.0:4180"
+    # Upstream is the session launcher service
+    upstreams = [
+        "http://session-launcher-service:8080/"
+    ]
+
+    # Configure for Entra ID using the generic OIDC provider
+    provider = "oidc"
+    
+    # !!! Replace <TENANT_ID> with your Entra ID Tenant ID !!!
+    oidc_issuer_url = "https://login.microsoftonline.com/<TENANT_ID>/v2.0"
+    
+    scope = "openid email profile"
+    
+    # Force email claim extraction from preferred_username if email is not present
+    oidc_email_claim = "preferred_username"
+    oidc_groups_claim = "groups"
+    
+    # If email is not in token, try preferred_username as fallback
+    pass_user_headers = true
+    set_xauthrequest = true
+    
+    # Profile URL to get user info if token claims are insufficient
+    profile_url = "https://graph.microsoft.com/v1.0/me"
+
+    # Allow any user from this tenant (use Entra policies for access control)
+    email_domains = [ "*" ]
+
+    # Required security settings (assuming TLS termination at the Gateway)
+    cookie_secure = true
+    reverse_proxy = true
+    
+    # Required for ttyd's WebSocket communication
+    pass_host_header = true
+    
+    # Skip authentication for WebSocket, session, and ttyd endpoints
+    skip_auth_regex = ["^/ws.*", "^/session/.*", "^/ttyd/.*"]
+    
+    # Custom branding and styling
+    footer = "K9s Administrative Access - Blackbutterfly Infrastructure"
+    banner = "🛡️ Secure Admin Access | Authorized Personnel Only"
+    
+    # Use custom templates
+    custom_templates_dir = "/etc/oauth2-proxy-templates"
+      
+    # Use custom logo from the mounted static directory
+    custom_sign_in_logo = "/etc/oauth2-proxy-templates/static/bbmxlogo.png"
